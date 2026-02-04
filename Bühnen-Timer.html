@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bühnen-Timer</title>
+
+<style>
+html, body{
+  height:100%;
+  margin:0;
+  font-family:-apple-system,system-ui,Arial,sans-serif;
+}
+
+/* =====================
+   HINTERGRUND-FARBEN
+   ===================== */
+body.bg-song{ background:#18b65a; color:#000; }
+body.bg-talk{ background:#ffd500; color:#000; }
+body.bg-alert{ background:#d60000; color:#fff; }
+body{ transition:background 120ms linear; }
+
+/* Blink */
+@keyframes blink{
+  0%{ filter:brightness(1); }
+  50%{ filter:brightness(0.55); }
+  100%{ filter:brightness(1); }
+}
+body.blink{ animation:blink 0.6s linear infinite; }
+
+/* =====================
+   LAYOUT
+   ===================== */
+.wrap{
+  height:100%;
+  display:flex;
+  flex-direction:column;
+}
+
+/* =====================
+   TOP-BAR
+   ===================== */
+.top{
+  position:relative;
+  height:170px;
+  border-bottom:4px solid rgba(0,0,0,0.25);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+
+/* =====================
+   BUTTON-CONTAINER
+   ===================== */
+.topButtons{
+  position:absolute;
+  top:8px;                 /* 🔥 etwas Abstand nach oben */
+  left:0;
+  right:0;
+  height:calc(100% - 24px);/* 🔥 Luft zur Linie unten */
+  display:flex;
+  justify-content:space-between;
+  padding:10px 14px;
+  pointer-events:none;
+}
+
+.leftBtns,.rightBtns{
+  display:flex;
+  gap:14px;
+  height:100%;
+  pointer-events:auto;
+}
+
+/* =====================
+   🔥 RIESEN-BUTTONS
+   ===================== */
+.topButtons button{
+  height:100%;
+  min-width:220px;
+  padding:0 28px;
+  font-size:34px;
+  font-weight:900;
+  border-radius:18px;
+  border:5px solid rgba(0,0,0,0.45);
+  background:#fff;
+  box-shadow:0 6px 0 rgba(0,0,0,0.35);
+}
+
+.topButtons button:active{
+  transform:translateY(4px);
+  box-shadow:0 2px 0 rgba(0,0,0,0.4);
+}
+
+/* =====================
+   🔥 RESTLAUFZEIT – OBEN MITTIG
+   ===================== */
+.pill{
+  font-size:92px;
+  font-weight:900;
+  padding:10px 28px;
+  border:5px solid #000;
+  border-radius:22px;
+  background:#fff;
+  color:#000;
+  line-height:1;
+  box-shadow:0 8px 0 rgba(0,0,0,0.35);
+  z-index:1;
+}
+
+/* Aktueller Abschnitt */
+.value{
+  font-size:22px;
+  font-weight:900;
+  margin-top:6px;
+  max-width:90vw;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-align:center;
+  z-index:1;
+}
+
+/* =====================
+   MAIN
+   ===================== */
+.main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:18px;
+  text-align:center;
+}
+
+.segmentName{
+  font-size:5.8vw;
+  font-weight:900;
+}
+
+.time{
+  font-size:22vw;
+  font-weight:900;
+  line-height:1;
+}
+
+/* =====================
+   ZEITBALKEN – EXTRA DICK
+   ===================== */
+.barWrap{
+  width:92vw;
+  height:48px;
+  border:4px solid rgba(0,0,0,0.4);
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(255,255,255,0.35);
+}
+.bar{
+  height:100%;
+  width:0%;
+  background:rgba(0,0,0,0.65);
+}
+
+/* =====================
+   RESPONSIVE
+   ===================== */
+@media (max-width:900px){
+  .pill{ font-size:72px; }
+  .topButtons button{
+    font-size:26px;
+    min-width:170px;
+    padding:0 20px;
+  }
+}
+</style>
+</head>
+
+<body class="bg-song">
+<div class="wrap">
+
+  <div class="top">
+
+    <!-- BUTTONS -->
+    <div class="topButtons">
+      <div class="leftBtns">
+        <button onclick="start()">START</button>
+        <button onclick="pause()">STOP</button>
+      </div>
+      <div class="rightBtns">
+        <button onclick="prev()">ZURÜCK</button>
+        <button onclick="next()">WEITER</button>
+      </div>
+    </div>
+
+    <!-- RESTZEIT -->
+    <div class="pill" id="total">00:00</div>
+    <div class="value" id="title">–</div>
+  </div>
+
+  <div class="main">
+    <div class="segmentName" id="name">–</div>
+    <div class="time" id="time">00:00</div>
+    <div class="barWrap"><div class="bar" id="bar"></div></div>
+  </div>
+
+</div>
+
+<script>
+/* =====================
+   FINALER ABLAUF – 29:52
+   ===================== */
+var segments = [
+  ["Für die Ewigkeit", 256],
+  ["Übergang (zu Kölsche Jung)", 20],
+  ["Kölsche Jung", 247],
+  ["Moderation (zu Leeve Marie)", 40],
+  ["Leeve Marie", 266],
+  ["Moderation (zu Karnevalsmaus)", 80],
+  ["Karnevalsmaus", 206],
+  ["Moderation (zu Oben / Unten)", 80],
+  ["Oben / Unten", 266],
+  ["Abmoderation", 50],
+  ["Nie mehr Fastelovend", 281]
+];
+
+var idx = 0;
+var remaining = segments[0][1];
+var running = false;
+var timer = null;
+
+function isTalk(name){
+  name = name.toLowerCase();
+  return name.indexOf("moderation") >= 0 ||
+         name.indexOf("übergang") >= 0 ||
+         name.indexOf("uebergang") >= 0 ||
+         name.indexOf("abmoderation") >= 0;
+}
+
+function format(t){
+  return String(Math.floor(t/60)).padStart(2,"0") + ":" +
+         String(t%60).padStart(2,"0");
+}
+
+function totalRemaining(){
+  var t = remaining;
+  for (var i = idx + 1; i < segments.length; i++) t += segments[i][1];
+  return t;
+}
+
+function updateUI(){
+  var name = segments[idx][0];
+
+  document.getElementById("title").textContent =
+    (idx+1) + "/" + segments.length + " – " + name;
+
+  document.getElementById("name").textContent = name;
+  document.getElementById("time").textContent = format(remaining);
+  document.getElementById("total").textContent = format(totalRemaining());
+
+  var pct = 100 * (1 - remaining / segments[idx][1]);
+  document.getElementById("bar").style.width = pct + "%";
+
+  document.body.className = "";
+  if (isTalk(name)){
+    if (remaining <= 10 && remaining > 0){
+      document.body.classList.add("bg-alert","blink");
+    } else {
+      document.body.classList.add("bg-talk");
+    }
+  } else {
+    document.body.classList.add("bg-song");
+  }
+}
+
+function stopInterval(){
+  if (timer !== null){
+    clearInterval(timer);
+    timer = null;
+  }
+}
+
+function tick(){
+  if (!running) return;
+
+  remaining--;
+
+  if (remaining <= 0){
+    if (idx < segments.length - 1){
+      idx++;
+      remaining = segments[idx][1];
+    } else {
+      pause();
+    }
+  }
+  updateUI();
+}
+
+function start(){
+  if (running) return;
+  running = true;
+  stopInterval();
+  timer = setInterval(tick, 1000);
+}
+
+function pause(){
+  running = false;
+  stopInterval();
+}
+
+function next(){
+  var wasRunning = running;
+  pause();
+  if (idx < segments.length - 1) idx++;
+  remaining = segments[idx][1];
+  updateUI();
+  if (wasRunning) start();
+}
+
+function prev(){
+  var wasRunning = running;
+  pause();
+  if (idx > 0) idx--;
+  remaining = segments[idx][1];
+  updateUI();
+  if (wasRunning) start();
+}
+
+updateUI();
+</script>
+
+</body>
+</html>
