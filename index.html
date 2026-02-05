@@ -3,11 +3,9 @@
 <head>
 <meta charset="utf-8">
 
-<!-- Viewport + Zoom verhindern -->
 <meta name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 
-<!-- iOS Standalone (Home-Bildschirm Vollbild, wichtig für iOS 12.5) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bühnen-Timer">
@@ -21,15 +19,11 @@ html, body{
   font-family:-apple-system,system-ui,Arial,sans-serif;
 }
 
-/* =====================
-   HINTERGRUND-FARBEN
-   ===================== */
 body.bg-song{ background:#18b65a; color:#000; }
 body.bg-talk{ background:#ffd500; color:#000; }
 body.bg-alert{ background:#d60000; color:#fff; }
 body{ transition:background 120ms linear; }
 
-/* Blink */
 @keyframes blink{
   0%{ filter:brightness(1); }
   50%{ filter:brightness(0.55); }
@@ -37,48 +31,38 @@ body{ transition:background 120ms linear; }
 }
 body.blink{ animation:blink 0.6s linear infinite; }
 
-/* iOS Touch/Zoom-Feinschliff */
-*{
-  -webkit-tap-highlight-color: transparent;
-}
+*{ -webkit-tap-highlight-color: transparent; }
 button{
   touch-action: manipulation;
   -webkit-user-select:none;
   user-select:none;
 }
 
-/* =====================
-   LAYOUT
-   ===================== */
 .wrap{
   height:100%;
   display:flex;
   flex-direction:column;
 }
 
-/* =====================
-   TOP-BAR
-   ===================== */
+/* TOP */
 .top{
   height:170px;
   border-bottom:4px solid rgba(0,0,0,0.25);
 
   display:grid;
   align-items:center;
-  grid-template-columns: 1fr 1fr auto 1fr 1fr;
+  grid-template-columns: 1fr 1fr var(--pillW) 1fr 1fr;
   grid-template-rows: 1fr auto;
   gap:10px 14px;
   padding:10px 14px 12px;
   box-sizing:border-box;
 
-  /* 🔥 PC & iPad angleichen */
   max-width:1400px;
   margin:0 auto;
+
+  --pillW: 320px;  /* feste Breite => nix wackelt */
 }
 
-/* =====================
-   BUTTONS
-   ===================== */
 .top button{
   height:100%;
   min-height:110px;
@@ -103,26 +87,29 @@ button{
 .btn-prev { grid-column:4; grid-row:1; }
 .btn-next { grid-column:5; grid-row:1; }
 
-/* =====================
-   RESTLAUFZEIT
-   ===================== */
 .pill{
   grid-column:3;
   grid-row:1;
   justify-self:center;
 
+  width:var(--pillW);
+  text-align:center;
+
   font-size:92px;
   font-weight:900;
-  padding:10px 24px;
+  padding:10px 0;
   border:5px solid #000;
   border-radius:22px;
   background:#fff;
   color:#000;
   line-height:1;
   box-shadow:0 8px 0 rgba(0,0,0,0.35);
+
+  /* 🔥 Ziffern gleich breit => keine Layout-Mikroverschiebung */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
-/* Titel unter Buttons */
 .value{
   grid-column:1 / 6;
   grid-row:2;
@@ -134,9 +121,6 @@ button{
   text-align:center;
 }
 
-/* =====================
-   MAIN
-   ===================== */
 .main{
   flex:1;
   display:flex;
@@ -156,11 +140,10 @@ button{
   font-size:22vw;
   font-weight:900;
   line-height:1;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
-/* =====================
-   ZEITBALKEN
-   ===================== */
 .barWrap{
   width:92vw;
   height:48px;
@@ -175,11 +158,9 @@ button{
   background:rgba(0,0,0,0.65);
 }
 
-/* =====================
-   RESPONSIVE
-   ===================== */
 @media (max-width:900px){
-  .pill{ font-size:72px; padding:10px 18px; }
+  .top{ --pillW: 260px; }
+  .pill{ font-size:72px; }
   .top button{
     font-size:26px;
     min-height:90px;
@@ -213,7 +194,7 @@ button{
 </div>
 
 <script>
-/* Doppeltipp-Zoom zusätzlich abfangen */
+/* Doppeltipp-Zoom zusätzlich abfangen (iOS) */
 (function(){
   let lastTouchEnd = 0;
   document.addEventListener('touchend', function(e){
@@ -223,9 +204,6 @@ button{
   }, { passive:false });
 })();
 
-/* =====================
-   ABLAUF – 29:52
-   ===================== */
 var segments = [
   ["Für die Ewigkeit", 256],
   ["Übergang (zu Kölsche Jung)", 20],
@@ -311,7 +289,6 @@ function start(){
   stopInterval();
   timer = setInterval(tick, 1000);
 }
-
 function pause(){
   running = false;
   stopInterval();
@@ -325,7 +302,6 @@ function next(){
   updateUI();
   if (wasRunning) start();
 }
-
 function prev(){
   const wasRunning = running;
   pause();
@@ -337,6 +313,5 @@ function prev(){
 
 updateUI();
 </script>
-
 </body>
 </html>
