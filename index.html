@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 
-<!-- Wichtig gegen Zoom + für iOS-Standalone -->
+<!-- Viewport + Zoom verhindern -->
 <meta name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 
-<!-- iOS "App"-Modus (wichtig für iOS 12.5 Home-Bildschirm Vollbild) -->
+<!-- iOS Standalone (Home-Bildschirm Vollbild, wichtig für iOS 12.5) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bühnen-Timer">
@@ -37,12 +37,12 @@ body{ transition:background 120ms linear; }
 }
 body.blink{ animation:blink 0.6s linear infinite; }
 
-/* iOS: weniger Auswahl/Zoom-Gefummel */
+/* iOS Touch/Zoom-Feinschliff */
 *{
   -webkit-tap-highlight-color: transparent;
 }
 button{
-  touch-action: manipulation; /* hilft gegen Doppeltipp-Zoom in vielen Fällen */
+  touch-action: manipulation;
   -webkit-user-select:none;
   user-select:none;
 }
@@ -57,26 +57,33 @@ button{
 }
 
 /* =====================
-   TOP-BAR  (NEU: Grid statt absolute -> KEINE Überlappung)
+   TOP-BAR
    ===================== */
 .top{
   height:170px;
   border-bottom:4px solid rgba(0,0,0,0.25);
+
   display:grid;
   align-items:center;
-  grid-template-columns: 1fr 1fr auto 1fr 1fr; /* Start | Stop | Restzeit | Zurück | Weiter */
-  grid-template-rows: 1fr auto;               /* Buttons oben | Titel unten */
+  grid-template-columns: 1fr 1fr auto 1fr 1fr;
+  grid-template-rows: 1fr auto;
   gap:10px 14px;
   padding:10px 14px 12px;
   box-sizing:border-box;
+
+  /* 🔥 PC & iPad angleichen */
+  max-width:1400px;
+  margin:0 auto;
 }
 
-/* Buttons bekommen feste "Bühnen"-Höhe, aber schmaler in der Breite */
+/* =====================
+   BUTTONS
+   ===================== */
 .top button{
   height:100%;
-  min-height:110px;              /* groß antippbar */
+  min-height:110px;
   width:100%;
-  max-width: 260px;              /* verhindert zu breite Buttons */
+  max-width:260px;
   padding:0 18px;
   font-size:34px;
   font-weight:900;
@@ -84,7 +91,6 @@ button{
   border:5px solid rgba(0,0,0,0.45);
   background:#fff;
   box-shadow:0 6px 0 rgba(0,0,0,0.35);
-  justify-self:stretch;
 }
 
 .top button:active{
@@ -98,13 +104,12 @@ button{
 .btn-next { grid-column:5; grid-row:1; }
 
 /* =====================
-   RESTLAUFZEIT – mittig, eigene Spalte => überlappt NIE
+   RESTLAUFZEIT
    ===================== */
 .pill{
   grid-column:3;
   grid-row:1;
   justify-self:center;
-  align-self:center;
 
   font-size:92px;
   font-weight:900;
@@ -117,14 +122,12 @@ button{
   box-shadow:0 8px 0 rgba(0,0,0,0.35);
 }
 
-/* Aktueller Abschnitt (unter den Buttons, über gesamte Breite) */
+/* Titel unter Buttons */
 .value{
   grid-column:1 / 6;
   grid-row:2;
-
   font-size:22px;
   font-weight:900;
-  max-width:100%;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -179,8 +182,8 @@ button{
   .pill{ font-size:72px; padding:10px 18px; }
   .top button{
     font-size:26px;
-    max-width: 220px;
     min-height:90px;
+    max-width:220px;
   }
 }
 </style>
@@ -195,8 +198,8 @@ button{
 
     <div class="pill" id="total">00:00</div>
 
-    <button class="btn-prev"  onclick="prev()">ZURÜCK</button>
-    <button class="btn-next"  onclick="next()">WEITER</button>
+    <button class="btn-prev" onclick="prev()">ZURÜCK</button>
+    <button class="btn-next" onclick="next()">WEITER</button>
 
     <div class="value" id="title">–</div>
   </div>
@@ -210,20 +213,18 @@ button{
 </div>
 
 <script>
-/* ========= Doppeltipp-Zoom zusätzlich abfangen (iOS zickt manchmal) ========= */
+/* Doppeltipp-Zoom zusätzlich abfangen */
 (function(){
   let lastTouchEnd = 0;
   document.addEventListener('touchend', function(e){
     const now = Date.now();
-    if (now - lastTouchEnd <= 350) {
-      e.preventDefault(); // verhindert in vielen Fällen den Doppeltipp-Zoom
-    }
+    if (now - lastTouchEnd <= 350) e.preventDefault();
     lastTouchEnd = now;
   }, { passive:false });
 })();
 
 /* =====================
-   FINALER ABLAUF – 29:52
+   ABLAUF – 29:52
    ===================== */
 var segments = [
   ["Für die Ewigkeit", 256],
@@ -246,10 +247,10 @@ var timer = null;
 
 function isTalk(name){
   name = name.toLowerCase();
-  return name.indexOf("moderation") >= 0 ||
-         name.indexOf("übergang") >= 0 ||
-         name.indexOf("uebergang") >= 0 ||
-         name.indexOf("abmoderation") >= 0;
+  return name.includes("moderation") ||
+         name.includes("übergang") ||
+         name.includes("uebergang") ||
+         name.includes("abmoderation");
 }
 
 function format(t){
@@ -258,14 +259,13 @@ function format(t){
 }
 
 function totalRemaining(){
-  var t = remaining;
-  for (var i = idx + 1; i < segments.length; i++) t += segments[i][1];
+  let t = remaining;
+  for (let i = idx + 1; i < segments.length; i++) t += segments[i][1];
   return t;
 }
 
 function updateUI(){
-  var name = segments[idx][0];
-
+  const name = segments[idx][0];
   document.getElementById("title").textContent =
     (idx+1) + "/" + segments.length + " – " + name;
 
@@ -273,9 +273,9 @@ function updateUI(){
   document.getElementById("time").textContent = format(remaining);
   document.getElementById("total").textContent = format(totalRemaining());
 
-  var segLen = segments[idx][1];
-  var pct = segLen > 0 ? 100 * (1 - remaining / segLen) : 100;
-  document.getElementById("bar").style.width = pct + "%";
+  const len = segments[idx][1];
+  document.getElementById("bar").style.width =
+    (len > 0 ? 100 * (1 - remaining / len) : 100) + "%";
 
   document.body.className = "";
   if (isTalk(name)){
@@ -290,24 +290,17 @@ function updateUI(){
 }
 
 function stopInterval(){
-  if (timer !== null){
-    clearInterval(timer);
-    timer = null;
-  }
+  if (timer){ clearInterval(timer); timer=null; }
 }
 
 function tick(){
   if (!running) return;
-
   remaining--;
-
   if (remaining <= 0){
     if (idx < segments.length - 1){
       idx++;
       remaining = segments[idx][1];
-    } else {
-      pause();
-    }
+    } else pause();
   }
   updateUI();
 }
@@ -325,7 +318,7 @@ function pause(){
 }
 
 function next(){
-  var wasRunning = running;
+  const wasRunning = running;
   pause();
   if (idx < segments.length - 1) idx++;
   remaining = segments[idx][1];
@@ -334,7 +327,7 @@ function next(){
 }
 
 function prev(){
-  var wasRunning = running;
+  const wasRunning = running;
   pause();
   if (idx > 0) idx--;
   remaining = segments[idx][1];
@@ -347,7 +340,3 @@ updateUI();
 
 </body>
 </html>
-
-
-
-
